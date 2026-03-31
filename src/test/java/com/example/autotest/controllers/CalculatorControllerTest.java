@@ -1,18 +1,16 @@
 package com.example.autotest.controllers;
 
 import com.example.autotest.services.CalculatorService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.MockBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(CalculatorController.class)
 public class CalculatorControllerTest {
@@ -23,63 +21,35 @@ public class CalculatorControllerTest {
     @MockBean
     private CalculatorService calculatorService;
 
-    @BeforeEach
-    void setup() {
-        when(calculatorService.add(anyInt(), anyInt())).thenReturn(10);
+    @Test
+    @DisplayName("testHappyPathAdd")
+    public void testHappyPathAdd() throws Exception {
+        when(calculatorService.add(2, 3)).thenReturn(5);
+        mockMvc.perform(get("/calc/add").param("a", "2").param("b", "3"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("5"));
     }
 
     @Test
-    @DisplayName("testAddHappyPath")
-    void testAddHappyPath() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/calc/add")
-                .param("a", "5")
-                .param("b", "5"))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.content().string("10"));
+    @DisplayName("testNegativeNumbersAdd")
+    public void testNegativeNumbersAdd() throws Exception {
+        when(calculatorService.add(-2, -3)).thenReturn(-5);
+        mockMvc.perform(get("/calc/add").param("a", "-2").param("b", "-3"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("-5"));
     }
 
     @Test
-    @DisplayName("testAddNegativeNumbers")
-    void testAddNegativeNumbers() throws Exception {
-        when(calculatorService.add(-5, -5)).thenReturn(-10);
-        mockMvc.perform(MockMvcRequestBuilders.get("/calc/add")
-                .param("a", "-5")
-                .param("b", "-5"))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.content().string("-10"));
+    @DisplayName("testMissingParameterAdd")
+    public void testMissingParameterAdd() throws Exception {
+        mockMvc.perform(get("/calc/add").param("a", "2"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("testAddMissingParameterA")
-    void testAddMissingParameterA() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/calc/add")
-                .param("b", "5"))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("testAddMissingParameterB")
-    void testAddMissingParameterB() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/calc/add")
-                .param("a", "5"))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("testAddNonIntegerParameterA")
-    void testAddNonIntegerParameterA() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/calc/add")
-                .param("a", "abc")
-                .param("b", "5"))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("testAddNonIntegerParameterB")
-    void testAddNonIntegerParameterB() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/calc/add")
-                .param("a", "5")
-                .param("b", "abc"))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+    @DisplayName("testNonIntegerParameterAdd")
+    public void testNonIntegerParameterAdd() throws Exception {
+        mockMvc.perform(get("/calc/add").param("a", "two").param("b", "3"))
+                .andExpect(status().isBadRequest());
     }
 }

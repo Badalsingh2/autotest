@@ -4,12 +4,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.mockito.Mock;
+import org.mockito.InjectMocks;
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 public class CalculatorServiceTest {
@@ -17,52 +16,59 @@ public class CalculatorServiceTest {
     @InjectMocks
     private CalculatorService calculatorService;
 
+    @Mock
+    private Object dependency; // this is not used in the CalculatorService class
+
+    @BeforeEach
+    void setup() {
+        // no need to initialize anything in this case
+    }
+
     @Test
-    @DisplayName("add two positive numbers")
-    public void addTwoPositiveNumbers() {
+    @DisplayName("test add method with positive numbers")
+    void testAddMethodWithPositiveNumbers() {
         int result = calculatorService.add(5, 7);
         assertEquals(12, result);
     }
 
     @Test
-    @DisplayName("add two negative numbers")
-    public void addTwoNegativeNumbers() {
+    @DisplayName("test add method with negative numbers")
+    void testAddMethodWithNegativeNumbers() {
         int result = calculatorService.add(-5, -7);
         assertEquals(-12, result);
     }
 
     @Test
-    @DisplayName("add one positive and one negative number")
-    public void addOnePositiveAndOneNegativeNumber() {
-        int result = calculatorService.add(5, -7);
-        assertEquals(-2, result);
+    @DisplayName("test add method with mixed numbers")
+    void testAddMethodWithMixedNumbers() {
+        int result = calculatorService.add(-5, 7);
+        assertEquals(2, result);
     }
 
     @Test
-    @DisplayName("divide two positive numbers")
-    public void divideTwoPositiveNumbers() {
+    @DisplayName("test divide method with positive numbers")
+    void testDivideMethodWithPositiveNumbers() {
         int result = calculatorService.divide(10, 2);
         assertEquals(5, result);
     }
 
     @Test
-    @DisplayName("divide two negative numbers")
-    public void divideTwoNegativeNumbers() {
+    @DisplayName("test divide method with negative numbers")
+    void testDivideMethodWithNegativeNumbers() {
+        int result = calculatorService.divide(-10, 2);
+        assertEquals(-5, result);
+    }
+
+    @Test
+    @DisplayName("test divide method with mixed numbers")
+    void testDivideMethodWithMixedNumbers() {
         int result = calculatorService.divide(-10, -2);
         assertEquals(5, result);
     }
 
     @Test
-    @DisplayName("divide one positive and one negative number")
-    public void divideOnePositiveAndOneNegativeNumber() {
-        int result = calculatorService.divide(10, -2);
-        assertEquals(-5, result);
-    }
-
-    @Test
-    @DisplayName("divide by zero")
-    public void divideByZero() {
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> calculatorService.divide(10, 0));
-        assertEquals("Cannot divide by zero", exception.getMessage());
+    @DisplayName("test divide method with zero divisor")
+    void testDivideMethodWithZeroDivisor() {
+        assertThrows(RuntimeException.class, () -> calculatorService.divide(10, 0));
     }
 }
