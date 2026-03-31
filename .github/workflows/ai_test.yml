@@ -11,13 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       checks: write
-      contents: read
+      contents: write        # needed to push generated test files back to repo
       pull-requests: write
 
     steps:
       # ── 1. Checkout code ────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       # ── 2. Set up Java 17 ───────────────────────────────────────
       - name: Set up JDK 17
@@ -71,7 +74,55 @@ jobs:
 
           exit $EXIT_CODE
 
-      # ── 8. Publish test results in GitHub UI ────────────────────
+      # ── 8. Save test report as txt ───────────────────────────────
+      - name: Save test report summary
+        if: always()
+        run: |
+          REPORT_FILE="test-report-${{ github.run_number }}.txt"
+          echo "=======================================" > $REPORT_FILE
+          echo " TEST REPORT — Run #${{ github.run_number }}" >> $REPORT_FILE
+          echo " Commit: ${{ github.sha }}" >> $REPORT_FILE
+          echo " Branch: ${{ github.ref_name }}" >> $REPORT_FILE
+          echo " Date:   $(date -u)" >> $REPORT_FILE
+          echo "=======================================" >> $REPORT_FILE
+          echo "" >> $REPORT_FILE
+          echo "--- GROQ GENERATOR OUTPUT ---" >> $REPORT_FILE
+          cat test-output.txt >> $REPORT_FILE
+          echo "" >> $REPORT_FILE
+          echo "--- SUREFIRE SUMMARY ---" >> $REPORT_FILE
+          find target/surefire-reports -name "*.txt" 2>/dev/null | while read f; do
+            echo "" >> $REPORT_FILE
+            echo "### $f ###" >> $REPORT_FILE
+            cat "$f" >> $REPORT_FILE
+          done
+          echo "" >> $REPORT_FILE
+          echo "--- JACOCO COVERAGE SUMMARY ---" >> $REPORT_FILE
+          if [ -f target/site/jacoco/index.html ]; then
+            grep -oP '(?<=<td class="ctr2">)\d+%' target/site/jacoco/index.html | head -10 >> $REPORT_FILE || true
+          else
+            echo "JaCoCo report not available" >> $REPORT_FILE
+          fi
+          echo "✅ Report saved: $REPORT_FILE"
+
+      # ── 9. Commit generated test files + report back to repo ─────
+      - name: Commit generated tests and report to repo
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add src/test/java/ || true
+          git add test-report-${{ github.run_number }}.txt || true
+
+          if git diff --cached --quiet; then
+            echo "ℹ️  Nothing new to commit"
+          else
+            git commit -m "🤖 [auto-test] Add generated tests + report (run #${{ github.run_number }}) [skip ci]"
+            git push origin HEAD:${{ github.ref_name }}
+            echo "✅ Pushed generated tests and report to repo"
+          fi
+
+      # ── 10. Publish test results in GitHub UI ────────────────────
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
@@ -80,7 +131,7 @@ jobs:
           check_name: "Groq AI Generated Test Results"
           comment_on_pr: true
 
-      # ── 9. Upload test reports ───────────────────────────────────
+      # ── 11. Upload test reports as artifact ──────────────────────
       - name: Upload Test Reports
         uses: actions/upload-artifact@v4
         if: always()
@@ -88,10 +139,12 @@ jobs:
           name: test-reports-${{ github.run_number }}
           path: |
             target/surefire-reports/
+            target/site/jacoco/
             test-output.txt
+            test-report-${{ github.run_number }}.txt
           retention-days: 30
 
-      # ── 10. Upload generated test source files ───────────────────
+      # ── 12. Upload generated test source files ───────────────────
       - name: Upload Generated Test Sources
         uses: actions/upload-artifact@v4
         if: always()
