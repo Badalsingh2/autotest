@@ -1,0 +1,97 @@
+name: Auto-Generate & Run Tests (Groq AI)
+
+on:
+  push:
+    branches: [ "main", "dev", "master" ]
+  pull_request:
+    branches: [ "main", "dev", "master" ]
+
+jobs:
+  auto-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout code ────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Java 17 ───────────────────────────────────────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # ── 3. Set up Python ─────────────────────────────────────────
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # ── 4. Install groq SDK ──────────────────────────────────────
+      - name: Install groq SDK
+        run: pip install groq -q
+
+      # ── 5. Fix misplaced test files ──────────────────────────────
+      - name: Fix misplaced test files
+        run: |
+          echo "🔍 Checking for test files in src/main/java..."
+          find src/main/java -name "*Test.java" 2>/dev/null | while read f; do
+            DEST="${f/src\/main\/java/src\/test\/java}"
+            mkdir -p "$(dirname "$DEST")"
+            mv "$f" "$DEST"
+            echo "   🚚 Moved: $f → $DEST"
+          done
+          echo "   ✅ Done."
+
+      # ── 6. Compile project ───────────────────────────────────────
+      - name: Compile project
+        run: mvn compile -q
+
+      # ── 7. Generate + Run + Fix tests via Groq AI ───────────────
+      - name: Generate, Run and Fix tests with Groq AI
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          echo "🤖 Running Groq AI test generator..."
+          python generate_tests.py 2>&1 | tee test-output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          echo ""
+          echo "═══════════════════════════════════════"
+          echo "📊 TEST RESULTS SUMMARY"
+          echo "═══════════════════════════════════════"
+          grep -E "Tests run:|BUILD|PASSED|FAILED|ERROR" test-output.txt || true
+          echo "═══════════════════════════════════════"
+
+          exit $EXIT_CODE
+
+      # ── 8. Publish test results in GitHub UI ────────────────────
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: target/surefire-reports/*.xml
+          check_name: "Groq AI Generated Test Results"
+          comment_on_pr: true
+
+      # ── 9. Upload test reports ───────────────────────────────────
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports-${{ github.run_number }}
+          path: |
+            target/surefire-reports/
+            test-output.txt
+          retention-days: 30
+
+      # ── 10. Upload generated test source files ───────────────────
+      - name: Upload Generated Test Sources
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: generated-tests-${{ github.run_number }}
+          path: src/test/java/
+          retention-days: 7
