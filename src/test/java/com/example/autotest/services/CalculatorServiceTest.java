@@ -17,11 +17,11 @@ public class CalculatorServiceTest {
     private CalculatorService calculatorService;
 
     @Mock
-    private Object dependency; // this is not used in the CalculatorService class
+    private Object mockObject; // mock object is not needed in this case
 
     @BeforeEach
     void setup() {
-        // no need to initialize anything in this case
+        // no setup needed
     }
 
     @Test
