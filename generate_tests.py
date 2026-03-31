@@ -709,3 +709,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# python generate_tests.py
