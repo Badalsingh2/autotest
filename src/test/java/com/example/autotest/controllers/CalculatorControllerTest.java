@@ -22,33 +22,35 @@ public class CalculatorControllerTest {
     private CalculatorService calculatorService;
 
     @Test
-    @DisplayName("testHappyPathAdd")
-    public void testHappyPathAdd() throws Exception {
+    @DisplayName("testAddHappyPath")
+    public void testAddHappyPath() throws Exception {
         when(calculatorService.add(2, 3)).thenReturn(5);
         mockMvc.perform(get("/calc/add").param("a", "2").param("b", "3"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("5"));
+        verify(calculatorService, times(1)).add(2, 3);
     }
 
     @Test
-    @DisplayName("testNegativeNumbersAdd")
-    public void testNegativeNumbersAdd() throws Exception {
+    @DisplayName("testAddNegativeNumbers")
+    public void testAddNegativeNumbers() throws Exception {
         when(calculatorService.add(-2, -3)).thenReturn(-5);
         mockMvc.perform(get("/calc/add").param("a", "-2").param("b", "-3"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("-5"));
+        verify(calculatorService, times(1)).add(-2, -3);
     }
 
     @Test
-    @DisplayName("testMissingParameterAdd")
-    public void testMissingParameterAdd() throws Exception {
+    @DisplayName("testAddMissingParameters")
+    public void testAddMissingParameters() throws Exception {
         mockMvc.perform(get("/calc/add").param("a", "2"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("testNonIntegerParameterAdd")
-    public void testNonIntegerParameterAdd() throws Exception {
+    @DisplayName("testAddNonIntegerParameters")
+    public void testAddNonIntegerParameters() throws Exception {
         mockMvc.perform(get("/calc/add").param("a", "two").param("b", "3"))
                 .andExpect(status().isBadRequest());
     }
