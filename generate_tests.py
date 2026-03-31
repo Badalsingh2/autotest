@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Groq AI Test Generator + Auto-Fixer (Free)
--------------------------------------------
+Groq AI Test Generator + Auto-Fixer
+-------------------------------------
 1. Finds all Service and Controller Java files
 2. Generates JUnit 5 + Mockito tests via Groq AI
 3. Runs mvn test
@@ -70,6 +70,37 @@ def error(msg):
 
 
 # ─────────────────────────────────────────────
+#  Path normalisation helper
+#  Always returns forward-slash relative path
+#  starting from src/test/java or src/main/java
+# ─────────────────────────────────────────────
+
+def normalise_path(p: str) -> str:
+    """
+    Convert any absolute or mixed-separator path to a normalised
+    relative path starting from 'src/', using os.sep.
+    e.g.  D:\\work\\autotest\\src\\test\\java\\Foo.java
+          → src/test/java/Foo.java  (forward slash, relative)
+    """
+    p = p.replace("\\", "/")
+    for marker in ("src/test/java/", "src/main/java/"):
+        if marker in p:
+            return marker + p.split(marker, 1)[1]
+    # fallback — just strip leading drive/abs prefix
+    if p.startswith("/"):
+        parts = p.lstrip("/").split("/")
+        for i, part in enumerate(parts):
+            if part == "src":
+                return "/".join(parts[i:])
+    return p
+
+
+def norm(p: str) -> str:
+    """normalise_path then convert to os.sep"""
+    return normalise_path(p).replace("/", os.sep)
+
+
+# ─────────────────────────────────────────────
 #  Install groq SDK if missing
 # ─────────────────────────────────────────────
 
@@ -104,9 +135,8 @@ def call_groq(system_prompt, user_prompt):
     except ImportError:
         pass
     except Exception as e:
-        warn(f"SDK error: {e} — trying HTTP...")
+        warn(f"SDK error: {e} — trying HTTP fallback...")
 
-    # HTTP fallback
     payload = json.dumps({
         "model": MODEL,
         "messages": [
@@ -134,8 +164,7 @@ def call_groq(system_prompt, user_prompt):
             data = json.loads(resp.read().decode("utf-8"))
             return data["choices"][0]["message"]["content"].strip()
     except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8")
-        error(f"HTTP {e.code}: {body}")
+        error(f"HTTP {e.code}: {e.read().decode('utf-8')}")
         return None
     except Exception as e:
         error(f"Request failed: {e}")
@@ -152,7 +181,7 @@ def find_java_files():
     targets = []
     for f in all_files:
         name = os.path.basename(f)
-        if (name.endswith("Service.java") or name.endswith("Controller.java")):
+        if name.endswith("Service.java") or name.endswith("Controller.java"):
             if not name.endswith("Test.java"):
                 targets.append(f)
     return targets
@@ -180,84 +209,143 @@ def clean_code(content):
 
 
 # ─────────────────────────────────────────────
+#  resolve_test_file
+#  Given any path key from parse_errors, return
+#  the actual path on disk (or None).
+# ─────────────────────────────────────────────
+
+def resolve_test_file(test_path: str):
+    # 1. Direct hit
+    if os.path.exists(test_path):
+        return test_path
+
+    # 2. Normalise and try again
+    candidate = norm(test_path)
+    if os.path.exists(candidate):
+        return candidate
+
+    # 3. Search by filename
+    filename = os.path.basename(test_path)
+    if not filename.endswith(".java"):
+        filename += ".java"
+    matches = glob.glob(os.path.join(TEST_ROOT, "**", filename), recursive=True)
+    if matches:
+        return matches[0]
+
+    return None
+
+
+# ─────────────────────────────────────────────
+#  find_source_for_test
+#  Given a resolved test path, find the best
+#  matching entry in source_map / generated.
+# ─────────────────────────────────────────────
+
+def find_source_for_test(test_path: str, generated: dict, source_map: dict) -> str:
+    test_norm = norm(test_path)
+
+    # 1. Direct lookup (normalised keys)
+    for gen_path, orig_path in generated.items():
+        if norm(gen_path) == test_norm:
+            return source_map.get(orig_path, "")
+
+    # 2. Match by basename — e.g. CalculatorServiceTest.java → CalculatorService.java
+    test_base = os.path.basename(test_norm)                  # CalculatorServiceTest.java
+    src_base  = test_base.replace("Test.java", ".java")      # CalculatorService.java
+
+    for gen_path, orig_path in generated.items():
+        if os.path.basename(gen_path) == test_base:
+            return source_map.get(orig_path, "")
+        if os.path.basename(orig_path) == src_base:
+            return source_map.get(orig_path, "")
+
+    return ""
+
+
+# ─────────────────────────────────────────────
 #  Post-process: fix known Groq mistakes
-#  Called on every generated/fixed file before
-#  writing to disk.
 # ─────────────────────────────────────────────
 
 def post_process(code: str, is_controller: bool) -> str:
+
     # ── 1. Wrong @MockBean import ──────────────────────────────
     code = code.replace(
         "import org.mockito.MockBean;",
         "import org.springframework.boot.test.mock.mockito.MockBean;"
     )
 
-    # ── 2. Missing static Mockito imports ─────────────────────
-    # If the file uses when( / verify( / any( but doesn't import them
+    # ── 2. Missing static Mockito imports ──────────────────────
     needs_mockito_static = any(
-        kw in code for kw in ["when(", "verify(", "doReturn(", "doThrow(", "any(", "eq(", "times("]
+        kw in code for kw in [
+            "when(", "verify(", "doReturn(", "doThrow(",
+            "any(", "eq(", "times(", "never(", "given("
+        ]
     )
     has_mockito_static = "import static org.mockito.Mockito" in code
     if needs_mockito_static and not has_mockito_static:
-        # Insert after the last regular mockito import, or after package line
         if "import org.mockito" in code:
             code = re.sub(
                 r"(import org\.mockito[^;]+;)",
                 r"\1\nimport static org.mockito.Mockito.*;",
-                code,
-                count=1
+                code, count=1
             )
         else:
             code = re.sub(
                 r"(^package[^;]+;)",
                 r"\1\n\nimport static org.mockito.Mockito.*;",
-                code,
-                flags=re.MULTILINE,
-                count=1
+                code, flags=re.MULTILINE, count=1
             )
 
-    # ── 3. Missing @ExtendWith for service tests ───────────────
-    # If file uses @InjectMocks but has no @ExtendWith → NPE at runtime
-    has_inject_mocks  = "@InjectMocks" in code
-    has_extend_with   = "@ExtendWith" in code
-    has_web_mvc_test  = "@WebMvcTest" in code
-    if has_inject_mocks and not has_extend_with and not has_web_mvc_test:
-        # Add import if missing
+    # ── 3. @InjectMocks without @ExtendWith → NPE ──────────────
+    has_inject   = "@InjectMocks"  in code
+    has_extend   = "@ExtendWith"   in code
+    has_webmvc   = "@WebMvcTest"   in code
+    has_springbt = "@SpringBootTest" in code
+
+    if has_inject and not has_extend and not has_webmvc and not has_springbt:
         if "import org.junit.jupiter.api.extension.ExtendWith;" not in code:
             code = re.sub(
                 r"(^package[^;]+;)",
-                r"\1\n\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.junit.jupiter.MockitoExtension;",
-                code,
-                flags=re.MULTILINE,
-                count=1
+                (r"\1\n\nimport org.junit.jupiter.api.extension.ExtendWith;"
+                 r"\nimport org.mockito.junit.jupiter.MockitoExtension;"),
+                code, flags=re.MULTILINE, count=1
             )
-        # Add annotation before public class
-        if "@ExtendWith" not in code:
-            code = re.sub(
-                r"(public\s+class\s+\w+)",
-                r"@ExtendWith(MockitoExtension.class)\n\1",
-                code,
-                count=1
-            )
+        code = re.sub(
+            r"(public\s+class\s+\w+)",
+            r"@ExtendWith(MockitoExtension.class)\n\1",
+            code, count=1
+        )
 
-    # ── 4. Missing MockitoExtension import when @ExtendWith present
+    # ── 4. @ExtendWith present but imports missing ─────────────
     if "@ExtendWith(MockitoExtension.class)" in code:
         if "import org.mockito.junit.jupiter.MockitoExtension;" not in code:
             code = re.sub(
                 r"(^package[^;]+;)",
-                r"\1\n\nimport org.mockito.junit.jupiter.MockitoExtension;",
-                code,
-                flags=re.MULTILINE,
-                count=1
+                r"\1\nimport org.mockito.junit.jupiter.MockitoExtension;",
+                code, flags=re.MULTILINE, count=1
             )
         if "import org.junit.jupiter.api.extension.ExtendWith;" not in code:
             code = re.sub(
                 r"(^package[^;]+;)",
-                r"\1\n\nimport org.junit.jupiter.api.extension.ExtendWith;",
-                code,
-                flags=re.MULTILINE,
-                count=1
+                r"\1\nimport org.junit.jupiter.api.extension.ExtendWith;",
+                code, flags=re.MULTILINE, count=1
             )
+
+    # ── 5. Controller: ensure MockMvc static imports present ───
+    if is_controller and "@WebMvcTest" in code:
+        mvc_statics = [
+            ("MockMvcRequestBuilders",
+             "import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;"),
+            ("MockMvcResultMatchers",
+             "import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;"),
+        ]
+        for marker, imp in mvc_statics:
+            if marker not in code:
+                code = re.sub(
+                    r"(^package[^;]+;)",
+                    rf"\1\n{imp}",
+                    code, flags=re.MULTILINE, count=1
+                )
 
     return code
 
@@ -276,59 +364,60 @@ def generate_test(java_path):
     if is_ctrl:
         mock_note = (
             "Use @WebMvcTest(ControllerClass.class) on the test class.\n"
-            "Use MockMvc injected with @Autowired.\n"
-            "For mocking Spring beans use ONLY @MockBean from:\n"
-            "  import org.springframework.boot.test.mock.mockito.MockBean;\n"
-            "NEVER write: import org.mockito.MockBean — that class does not exist.\n"
-            "Use MockMvcRequestBuilders and MockMvcResultMatchers for assertions.\n"
-            "Add: import static org.mockito.Mockito.*;\n"
-            "Add: import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;\n"
-            "Add: import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;"
+            "Inject MockMvc with @Autowired private MockMvc mockMvc;\n"
+            "Mock service dependencies with @MockBean "
+            "(import org.springframework.boot.test.mock.mockito.MockBean — "
+            "NOT org.mockito.MockBean which does not exist).\n"
+            "Use mockMvc.perform(get/post/put/delete(...)) with andExpect() for assertions.\n"
+            "Stub service calls with: when(service.method(any())).thenReturn(value);\n"
+            "Required static imports:\n"
+            "  import static org.mockito.Mockito.*;\n"
+            "  import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;\n"
+            "  import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;"
         )
     else:
         mock_note = (
-            "Annotate the test class with BOTH of these:\n"
-            "  @ExtendWith(MockitoExtension.class)\n"
-            "  (this is REQUIRED — without it @InjectMocks will be null at runtime)\n"
-            "Use @Mock for dependencies and @InjectMocks for the class under test.\n"
+            "REQUIRED: Annotate the test class with @ExtendWith(MockitoExtension.class).\n"
+            "Without this annotation, @InjectMocks is NEVER initialised "
+            "and every test throws NullPointerException.\n"
+            "Use @Mock for each dependency field.\n"
+            "Use @InjectMocks for the class under test.\n"
             "Required imports:\n"
             "  import org.junit.jupiter.api.extension.ExtendWith;\n"
             "  import org.mockito.junit.jupiter.MockitoExtension;\n"
             "  import org.mockito.Mock;\n"
             "  import org.mockito.InjectMocks;\n"
             "  import static org.mockito.Mockito.*;\n"
-            "Do NOT use @MockBean — that is only for Spring context tests.\n"
-            "Do NOT use @SpringBootTest — it is too heavy for unit tests."
+            "Do NOT use @MockBean or @SpringBootTest — pure unit test, no Spring context."
         )
 
     system = (
-        "You are an expert Java developer specializing in JUnit 5 and Mockito.\n"
-        "Output ONLY raw Java code. No markdown, no code fences, no explanation.\n\n"
-        "CRITICAL RULES — each violation causes a compile or runtime failure:\n"
-        "1. @MockBean      → import org.springframework.boot.test.mock.mockito.MockBean;  (Spring, controllers only)\n"
-        "2. @Mock          → import org.mockito.Mock;  (pure Mockito unit tests only)\n"
-        "3. @InjectMocks   → import org.mockito.InjectMocks;\n"
-        "4. when() / verify() / any() → import static org.mockito.Mockito.*;\n"
-        "5. NEVER 'import org.mockito.MockBean' — that class does not exist.\n"
-        "6. Service tests  → class MUST be annotated @ExtendWith(MockitoExtension.class)\n"
-        "   Without this annotation, @InjectMocks is never initialized → NullPointerException.\n"
-        "7. Controller tests → @WebMvcTest(XController.class) on the class, NO @ExtendWith needed.\n"
-        "8. Every test method must have at least one assertion."
+        "You are an expert Java developer specialising in JUnit 5 and Mockito.\n"
+        "Output ONLY raw Java code — no markdown, no code fences, no explanation.\n\n"
+        "HARD RULES (each violation causes compile or runtime failure):\n"
+        "1. @MockBean       → import org.springframework.boot.test.mock.mockito.MockBean;\n"
+        "2. @Mock           → import org.mockito.Mock;\n"
+        "3. @InjectMocks    → import org.mockito.InjectMocks;\n"
+        "4. when()/verify() → import static org.mockito.Mockito.*;\n"
+        "5. NEVER write 'import org.mockito.MockBean' — that class does not exist.\n"
+        "6. Service tests: class MUST have @ExtendWith(MockitoExtension.class).\n"
+        "   Omitting it means @InjectMocks is null → NullPointerException.\n"
+        "7. Controller tests: @WebMvcTest(XController.class) on the class.\n"
+        "8. Every @Test method must contain at least one assertion."
     )
 
     user = f"""Generate a complete JUnit 5 test class for this Java file.
 
 Rules:
-- JUnit 5 annotations only (@Test, @BeforeEach, @DisplayName)
+- JUnit 5 only (@Test, @BeforeEach, @DisplayName)
 - {mock_note}
-- Test every public method — happy path + edge cases
-- Meaningful camelCase test names
-- Assertions on every test
-- Package must be: {package}
-- Class name must be: {class_name}Test
-- Output ONLY the raw Java starting from the package line
+- Cover every public method: happy path + edge cases
+- Meaningful camelCase test method names
+- Package: {package}
+- Class name: {class_name}Test
+- Output ONLY raw Java starting from the package declaration
 
-Source ({filename}):
+Source file ({filename}):
 {content}"""
 
     result = call_groq(system, user)
@@ -338,8 +427,8 @@ Source ({filename}):
     result = clean_code(result)
     result = post_process(result, is_ctrl)
 
-    pkg    = extract_package(result)
-    cname  = extract_class_name(result)
+    pkg   = extract_package(result)
+    cname = extract_class_name(result)
 
     if not cname:
         warn(f"Could not extract class name from generated test for {filename}")
@@ -371,7 +460,7 @@ def run_maven_test():
         text=True
     )
     output = result.stdout + result.stderr
-    print(output[-4000:])
+    print(output[-5000:])
     return result.returncode == 0, output
 
 
@@ -382,74 +471,61 @@ def run_maven_test():
 def parse_errors(mvn_output):
     errors = {}
 
-    # ── A. Compilation errors — absolute path (GitHub Actions / Linux) ──
-    # [ERROR] /abs/path/src/test/java/com/example/FooTest.java:[7,19] msg
-    comp_abs = re.compile(
-        r"\[ERROR\]\s+(/[^\s:\[]+\.java)\s*[\[:](\d+)[,\d\]]*\s*(.*)"
-    )
-    for m in comp_abs.finditer(mvn_output):
+    # ── A. Compilation errors — Linux absolute path ─────────────
+    # [ERROR] /abs/path/src/test/java/Foo.java:[7,19] msg
+    for m in re.finditer(
+        r"\[ERROR\]\s+(/[^\s:\[]+\.java)\s*[\[:](\d+)[,\d\]]*\s*(.*)",
+        mvn_output
+    ):
         abs_path, line, msg = m.groups()
-        if "src" + os.sep + "test" in abs_path or "src/test" in abs_path:
-            idx = abs_path.find("src")
-            rel = abs_path[idx:].replace("/", os.sep)
-        else:
-            rel = abs_path
+        rel = norm(abs_path)
         errors.setdefault(rel, []).append(f"Line {line}: {msg.strip()}")
 
-    # ── B. Compilation errors — Windows/relative path ──────────────────
-    # [ERROR] D:\path\src\test\java\com\example\FooTest.java:[7,19] msg
-    comp_win = re.compile(
-        r"\[ERROR\]\s+([A-Za-z]:\\[^\s:\[]+\.java)\s*[\[:](\d+)[,\d\]]*\s*(.*)"
-    )
-    for m in comp_win.finditer(mvn_output):
+    # ── B. Compilation errors — Windows absolute path ───────────
+    # [ERROR] D:\path\src\test\java\Foo.java:[7,19] msg
+    for m in re.finditer(
+        r"\[ERROR\]\s+([A-Za-z]:[\\\/][^\s:\[]+\.java)\s*[\[:](\d+)[,\d\]]*\s*(.*)",
+        mvn_output
+    ):
         abs_path, line, msg = m.groups()
-        if "src" in abs_path:
-            idx = abs_path.find("src")
-            rel = abs_path[idx:].replace("\\", os.sep).replace("/", os.sep)
-        else:
-            rel = abs_path
+        rel = norm(abs_path)
         errors.setdefault(rel, []).append(f"Line {line}: {msg.strip()}")
 
-    # ── C. Runtime test failures/errors ────────────────────────────────
-    # Surefire format:  [ERROR]   ClassName.methodName:lineNum  reason
-    #                   [ERROR]   ClassName.methodName:lineNum NullPointer ...
-    runtime = re.compile(
-        r"\[ERROR\]\s{2,}([\w]+)\.([\w]+):(\d+)\s+(.*)"
-    )
-    for m in runtime.finditer(mvn_output):
+    # ── C. Runtime failures — Surefire compact format ───────────
+    # [ERROR]   ClassName.methodName:lineNum  reason text
+    for m in re.finditer(
+        r"\[ERROR\]\s{2,}([\w]+)\.([\w]+):(\d+)\s+(.*)",
+        mvn_output
+    ):
         class_name, method, line, reason = m.groups()
-        # Find the actual file on disk
-        pattern = os.path.join(TEST_ROOT, "**", f"{class_name}.java")
-        matches = glob.glob(pattern, recursive=True)
-        for match_path in matches:
-            rel = match_path.replace("/", os.sep)
-            errors.setdefault(rel, []).append(
-                f"{method} line {line}: {reason.strip()}"
-            )
-        if not matches:
-            # File not found by glob — store under class name as fallback
-            errors.setdefault(class_name, []).append(
-                f"{method} line {line}: {reason.strip()}"
-            )
+        matches = glob.glob(
+            os.path.join(TEST_ROOT, "**", f"{class_name}.java"), recursive=True
+        )
+        key = norm(matches[0]) if matches else class_name
+        errors.setdefault(key, []).append(
+            f"{method} line {line}: {reason.strip()}"
+        )
 
-    # ── D. Surefire alternate format: ClassName > methodName  reason ───
-    alt_failure = re.compile(
-        r"\[ERROR\]\s+([\w.]+)\s*[>\-–]\s*([\w]+)\s+(.*)"
-    )
-    for m in alt_failure.finditer(mvn_output):
+    # ── D. Runtime failures — Surefire verbose format ───────────
+    # [ERROR] com.example.FooTest > testBar  AssertionError
+    for m in re.finditer(
+        r"\[ERROR\]\s+([\w.]+)\s*[>–\-]\s*([\w]+)\s+(.*)",
+        mvn_output
+    ):
         fqcn, method, reason = m.groups()
-        short = fqcn.split(".")[-1]
-        pattern = os.path.join(TEST_ROOT, "**", f"{short}.java")
-        for match_path in glob.glob(pattern, recursive=True):
-            rel = match_path.replace("/", os.sep)
-            errors.setdefault(rel, []).append(f"{method}: {reason.strip()}")
+        short   = fqcn.split(".")[-1]
+        matches = glob.glob(
+            os.path.join(TEST_ROOT, "**", f"{short}.java"), recursive=True
+        )
+        key = norm(matches[0]) if matches else short
+        errors.setdefault(key, []).append(f"{method}: {reason.strip()}")
 
-    # ── E. Fallback: general BUILD FAILURE ─────────────────────────────
+    # ── E. Fallback ─────────────────────────────────────────────
     if "BUILD FAILURE" in mvn_output and not errors:
         lines = [l for l in mvn_output.splitlines() if "[ERROR]" in l]
         errors["__general__"] = lines[:20]
 
-    # ── Debug output ───────────────────────────────────────────────────
+    # ── Debug ────────────────────────────────────────────────────
     if errors:
         print(f"   🔍 Parsed errors in {len(errors)} file(s):")
         for path, msgs in errors.items():
@@ -471,61 +547,51 @@ def fix_test_file(test_path, error_msgs, original_source):
         warn("General build error — trying pom.xml fix only")
         return False
 
-    # Resolve the file — may be relative or absolute
-    candidate = test_path
-    if not os.path.exists(candidate):
-        if "src" + os.sep + "test" in test_path or "src/test" in test_path:
-            idx = test_path.find("src")
-            candidate = test_path[idx:].replace("/", os.sep).replace("\\", os.sep)
+    resolved = resolve_test_file(test_path)
+    if not resolved:
+        warn(f"Cannot find on disk: {test_path}")
+        return False
 
-    if not os.path.exists(candidate):
-        # Last resort: search by filename
-        filename = os.path.basename(test_path)
-        matches  = glob.glob(os.path.join(TEST_ROOT, "**", filename), recursive=True)
-        if matches:
-            candidate = matches[0]
-        else:
-            warn(f"Test file not found on disk: {test_path}")
-            return False
-
-    current_test = read_file(candidate)
+    current_test = read_file(resolved)
     errors_text  = "\n".join(error_msgs)
-    is_ctrl      = "Controller" in os.path.basename(candidate)
+    is_ctrl      = "Controller" in os.path.basename(resolved)
 
-    step(f"Fixing: {os.path.basename(candidate)}")
-    print(f"   Errors:\n" + "\n".join(f"     {e}" for e in error_msgs[:5]))
+    step(f"Fixing: {os.path.basename(resolved)}")
+    print("   Errors:")
+    for e in error_msgs[:5]:
+        print(f"     - {e[:120]}")
 
     system = (
         "You are an expert Java developer. Fix the broken JUnit 5 test file.\n"
-        "Output ONLY the corrected raw Java code. No markdown, no explanation.\n\n"
-        "CRITICAL RULES:\n"
-        "1. @MockBean      → import org.springframework.boot.test.mock.mockito.MockBean;\n"
-        "2. @Mock          → import org.mockito.Mock;\n"
-        "3. @InjectMocks   → import org.mockito.InjectMocks;\n"
-        "4. when()/verify()/any() → import static org.mockito.Mockito.*;\n"
+        "Output ONLY the corrected raw Java code — no markdown, no explanation.\n\n"
+        "HARD RULES:\n"
+        "1. @MockBean       → import org.springframework.boot.test.mock.mockito.MockBean;\n"
+        "2. @Mock           → import org.mockito.Mock;\n"
+        "3. @InjectMocks    → import org.mockito.InjectMocks;\n"
+        "4. when()/verify() → import static org.mockito.Mockito.*;\n"
         "5. NEVER 'import org.mockito.MockBean' — does not exist.\n"
         "6. Service tests MUST have @ExtendWith(MockitoExtension.class) on the class.\n"
         "   Without it, @InjectMocks is null → NullPointerException on every test.\n"
-        "7. Controller tests use @WebMvcTest(XController.class) — no @ExtendWith needed.\n"
-        "8. Every test must have at least one assertion."
+        "7. Controller tests: @WebMvcTest(XController.class), no @ExtendWith needed.\n"
+        "8. Every @Test method must have at least one assertion."
     )
 
-    user = f"""Fix this JUnit 5 test file. It has the following errors:
+    user = f"""Fix this broken JUnit 5 test file.
 
-ERRORS:
+ERRORS TO FIX:
 {errors_text}
 
-CURRENT BROKEN TEST:
+CURRENT BROKEN TEST FILE:
 {current_test}
 
-ORIGINAL SOURCE (for context):
+ORIGINAL SOURCE FILE (for context):
 {original_source}
 
 Instructions:
-- Keep the same package and class name
+- Keep the exact same package and class name
 - Fix ALL listed errors
-- Do not remove any tests
-- Output ONLY the corrected raw Java starting from the package line"""
+- Do not remove any existing tests
+- Output ONLY the corrected raw Java starting from the package declaration"""
 
     fixed = call_groq(system, user)
     if not fixed:
@@ -539,8 +605,8 @@ Instructions:
         error("Fixed code has no class name — skipping")
         return False
 
-    write_file(candidate, fixed)
-    success(f"Fixed: {candidate}")
+    write_file(resolved, fixed)
+    success(f"Fixed and saved: {resolved}")
     return True
 
 
@@ -600,10 +666,8 @@ def main():
     if not GROQ_API_KEY:
         error("GROQ_API_KEY not set!")
         sys.exit(1)
-
     if not GROQ_API_KEY.startswith("gsk_"):
-        warn(f"Key doesn't look like a Groq key: {GROQ_API_KEY[:10]}...")
-
+        warn(f"Key prefix looks unexpected: {GROQ_API_KEY[:10]}...")
     print(f"   🔑 Key: {GROQ_API_KEY[:8]}...{GROQ_API_KEY[-4:]}")
 
     ensure_groq_sdk()
@@ -620,17 +684,18 @@ def main():
     for f in java_files:
         print(f"   • {f}")
 
-    source_map = {f: read_file(f) for f in java_files}
+    # source_map keyed by NORMALISED path for reliable lookup
+    source_map = { norm(f): read_file(f) for f in java_files }
 
     # ── STEP 1: Generate tests ───────────────────────
     banner("STEP 1 — Generating Tests")
-    generated = {}
+    generated = {}   # normalised test path → normalised source path
 
     for java_path in java_files:
         step(f"Generating: {os.path.basename(java_path)}")
         test_path, _ = generate_test(java_path)
         if test_path:
-            generated[test_path] = java_path
+            generated[norm(test_path)] = norm(java_path)
 
     if not generated:
         error("No tests were generated. Check your Groq API key.")
@@ -640,7 +705,7 @@ def main():
     for t in generated:
         print(f"   • {t}")
 
-    # ── STEP 2: Fix pom.xml before running ──────────
+    # ── STEP 2: Check pom.xml ────────────────────────
     banner("STEP 2 — Checking pom.xml")
     fix_pom_if_needed("")
 
@@ -669,35 +734,29 @@ def main():
             fix_pom_if_needed(mvn_output)
             continue
 
-        # Fix pom if dependency errors
         dep_keywords = ["cannot find symbol", "package does not exist", "classnotfoundexception"]
         if any(kw in mvn_output.lower() for kw in dep_keywords):
             fix_pom_if_needed(mvn_output)
 
-        # Fix each broken test file
         any_fixed = False
-        for test_path, err_msgs in errors_map.items():
-            if test_path == "__general__":
+        for test_path_key, err_msgs in errors_map.items():
+            if test_path_key == "__general__":
                 fix_pom_if_needed(mvn_output)
                 continue
-            # Find original source for this test
-            src_path    = generated.get(test_path, "")
-            src_content = source_map.get(src_path, "")
-            # Also try normalised path matching
+
+            # ── Resolve source content for this test ──
+            src_content = find_source_for_test(test_path_key, generated, source_map)
             if not src_content:
-                for gen_path, orig_path in generated.items():
-                    if os.path.basename(gen_path) == os.path.basename(test_path) + ".java" \
-                    or os.path.basename(gen_path) == os.path.basename(test_path):
-                        src_content = source_map.get(orig_path, "")
-                        break
-            if fix_test_file(test_path, err_msgs, src_content):
+                warn(f"No matching source found for {test_path_key} — fixing without source context")
+
+            if fix_test_file(test_path_key, err_msgs, src_content):
                 any_fixed = True
 
         if not any_fixed:
             warn("Nothing was fixed this round — stopping loop")
             break
 
-    # ── Final summary ────────────────────────────────
+    # ── Final summary ─────────────────────────────────
     banner("Summary")
     print(f"  Source files : {len(java_files)}")
     print(f"  Tests created: {len(generated)}")
@@ -709,5 +768,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# python generate_tests.py
