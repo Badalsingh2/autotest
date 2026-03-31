@@ -17,58 +17,65 @@ public class CalculatorServiceTest {
     private CalculatorService calculatorService;
 
     @Mock
-    private Object mockObject; // mock object is not needed in this case
+    private Object dependency; // no dependencies in CalculatorService, but added for demonstration
 
     @BeforeEach
-    void setup() {
-        // no setup needed
+    public void setup() {
+        // no setup needed for this simple service
     }
 
     @Test
-    @DisplayName("test add method with positive numbers")
-    void testAddMethodWithPositiveNumbers() {
-        int result = calculatorService.add(5, 7);
-        assertEquals(12, result);
-    }
-
-    @Test
-    @DisplayName("test add method with negative numbers")
-    void testAddMethodWithNegativeNumbers() {
-        int result = calculatorService.add(-5, -7);
-        assertEquals(-12, result);
-    }
-
-    @Test
-    @DisplayName("test add method with mixed numbers")
-    void testAddMethodWithMixedNumbers() {
-        int result = calculatorService.add(-5, 7);
-        assertEquals(2, result);
-    }
-
-    @Test
-    @DisplayName("test divide method with positive numbers")
-    void testDivideMethodWithPositiveNumbers() {
-        int result = calculatorService.divide(10, 2);
+    @DisplayName("testAddHappyPath")
+    public void testAddHappyPath() {
+        int result = calculatorService.add(2, 3);
         assertEquals(5, result);
     }
 
     @Test
-    @DisplayName("test divide method with negative numbers")
-    void testDivideMethodWithNegativeNumbers() {
-        int result = calculatorService.divide(-10, 2);
+    @DisplayName("testAddNegativeNumbers")
+    public void testAddNegativeNumbers() {
+        int result = calculatorService.add(-2, -3);
         assertEquals(-5, result);
     }
 
     @Test
-    @DisplayName("test divide method with mixed numbers")
-    void testDivideMethodWithMixedNumbers() {
-        int result = calculatorService.divide(-10, -2);
-        assertEquals(5, result);
+    @DisplayName("testAddMixedNumbers")
+    public void testAddMixedNumbers() {
+        int result = calculatorService.add(-2, 3);
+        assertEquals(1, result);
     }
 
     @Test
-    @DisplayName("test divide method with zero divisor")
-    void testDivideMethodWithZeroDivisor() {
-        assertThrows(RuntimeException.class, () -> calculatorService.divide(10, 0));
+    @DisplayName("testDivideHappyPath")
+    public void testDivideHappyPath() {
+        int result = calculatorService.divide(6, 2);
+        assertEquals(3, result);
+    }
+
+    @Test
+    @DisplayName("testDivideByOne")
+    public void testDivideByOne() {
+        int result = calculatorService.divide(6, 1);
+        assertEquals(6, result);
+    }
+
+    @Test
+    @DisplayName("testDivideNegativeNumbers")
+    public void testDivideNegativeNumbers() {
+        int result = calculatorService.divide(-6, -2);
+        assertEquals(3, result);
+    }
+
+    @Test
+    @DisplayName("testDivideMixedNumbers")
+    public void testDivideMixedNumbers() {
+        int result = calculatorService.divide(-6, 2);
+        assertEquals(-3, result);
+    }
+
+    @Test
+    @DisplayName("testDivideByZero")
+    public void testDivideByZero() {
+        assertThrows(RuntimeException.class, () -> calculatorService.divide(6, 0));
     }
 }
