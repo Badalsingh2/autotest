@@ -105,6 +105,8 @@ jobs:
           echo "✅ Report saved: $REPORT_FILE"
 
       # ── 9. Commit generated test files + report back to repo ─────
+      #       git pull --rebase prevents merge conflicts when you push
+      #       at the same time the workflow is committing generated files.
       - name: Commit generated tests and report to repo
         if: always()
         run: |
@@ -118,6 +120,11 @@ jobs:
             echo "ℹ️  Nothing new to commit"
           else
             git commit -m "🤖 [auto-test] Add generated tests + report (run #${{ github.run_number }}) [skip ci]"
+
+            # Pull with rebase before pushing to avoid conflicts when the
+            # developer pushes while the workflow is still running.
+            git pull --rebase origin ${{ github.ref_name }} || true
+
             git push origin HEAD:${{ github.ref_name }}
             echo "✅ Pushed generated tests and report to repo"
           fi

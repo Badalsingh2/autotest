@@ -347,6 +347,41 @@ def post_process(code: str, is_controller: bool) -> str:
                     code, flags=re.MULTILINE, count=1
                 )
 
+    # ── 6. ALWAYS ensure core JUnit 5 imports are present ──────
+    #       Groq frequently uses @Test / @DisplayName / @BeforeEach
+    #       but forgets the imports — this is the root cause of
+    #       "cannot find symbol: class Test" compile errors.
+    junit5_imports = [
+        ("@Test",         "import org.junit.jupiter.api.Test;"),
+        ("@DisplayName",  "import org.junit.jupiter.api.DisplayName;"),
+        ("@BeforeEach",   "import org.junit.jupiter.api.BeforeEach;"),
+        ("@AfterEach",    "import org.junit.jupiter.api.AfterEach;"),
+        ("@BeforeAll",    "import org.junit.jupiter.api.BeforeAll;"),
+        ("@AfterAll",     "import org.junit.jupiter.api.AfterAll;"),
+        ("@Disabled",     "import org.junit.jupiter.api.Disabled;"),
+        ("@ParameterizedTest", "import org.junit.jupiter.params.ParameterizedTest;"),
+        ("Assertions.",   "import org.junit.jupiter.api.Assertions;"),
+        ("assertEquals",  "import static org.junit.jupiter.api.Assertions.*;"),
+        ("assertNotNull", "import static org.junit.jupiter.api.Assertions.*;"),
+        ("assertThrows",  "import static org.junit.jupiter.api.Assertions.*;"),
+        ("assertTrue",    "import static org.junit.jupiter.api.Assertions.*;"),
+        ("assertFalse",   "import static org.junit.jupiter.api.Assertions.*;"),
+        ("assertNull",    "import static org.junit.jupiter.api.Assertions.*;"),
+    ]
+
+    # Deduplicate: only add each import once
+    already_added = set()
+    for annotation, imp in junit5_imports:
+        if imp in already_added:
+            continue
+        if annotation in code and imp not in code:
+            code = re.sub(
+                r"(^package[^;]+;)",
+                rf"\1\n{imp}",
+                code, flags=re.MULTILINE, count=1
+            )
+            already_added.add(imp)
+
     return code
 
 
@@ -395,15 +430,21 @@ def generate_test(java_path):
         "You are an expert Java developer specialising in JUnit 5 and Mockito.\n"
         "Output ONLY raw Java code — no markdown, no code fences, no explanation.\n\n"
         "HARD RULES (each violation causes compile or runtime failure):\n"
-        "1. @MockBean       → import org.springframework.boot.test.mock.mockito.MockBean;\n"
-        "2. @Mock           → import org.mockito.Mock;\n"
-        "3. @InjectMocks    → import org.mockito.InjectMocks;\n"
-        "4. when()/verify() → import static org.mockito.Mockito.*;\n"
-        "5. NEVER write 'import org.mockito.MockBean' — that class does not exist.\n"
-        "6. Service tests: class MUST have @ExtendWith(MockitoExtension.class).\n"
-        "   Omitting it means @InjectMocks is null → NullPointerException.\n"
-        "7. Controller tests: @WebMvcTest(XController.class) on the class.\n"
-        "8. Every @Test method must contain at least one assertion."
+        "1.  @MockBean       → import org.springframework.boot.test.mock.mockito.MockBean;\n"
+        "2.  @Mock           → import org.mockito.Mock;\n"
+        "3.  @InjectMocks    → import org.mockito.InjectMocks;\n"
+        "4.  when()/verify() → import static org.mockito.Mockito.*;\n"
+        "5.  NEVER write 'import org.mockito.MockBean' — that class does not exist.\n"
+        "6.  Service tests: class MUST have @ExtendWith(MockitoExtension.class).\n"
+        "    Omitting it means @InjectMocks is null → NullPointerException.\n"
+        "7.  Controller tests: @WebMvcTest(XController.class) on the class.\n"
+        "8.  Every @Test method must contain at least one assertion.\n"
+        "9.  ALWAYS import: import org.junit.jupiter.api.Test;\n"
+        "10. ALWAYS import: import org.junit.jupiter.api.DisplayName;\n"
+        "11. ALWAYS import: import org.junit.jupiter.api.BeforeEach; (if @BeforeEach used)\n"
+        "12. ALWAYS import: import static org.junit.jupiter.api.Assertions.*;\n"
+        "13. Every annotation used MUST have a corresponding import statement.\n"
+        "14. Do NOT rely on star imports for JUnit 5 annotations — be explicit."
     )
 
     user = f"""Generate a complete JUnit 5 test class for this Java file.
@@ -416,6 +457,12 @@ Rules:
 - Package: {package}
 - Class name: {class_name}Test
 - Output ONLY raw Java starting from the package declaration
+
+CRITICAL IMPORT REQUIREMENTS — include ALL of these that you use:
+  import org.junit.jupiter.api.Test;
+  import org.junit.jupiter.api.DisplayName;
+  import org.junit.jupiter.api.BeforeEach;
+  import static org.junit.jupiter.api.Assertions.*;
 
 Source file ({filename}):
 {content}"""
@@ -565,15 +612,20 @@ def fix_test_file(test_path, error_msgs, original_source):
         "You are an expert Java developer. Fix the broken JUnit 5 test file.\n"
         "Output ONLY the corrected raw Java code — no markdown, no explanation.\n\n"
         "HARD RULES:\n"
-        "1. @MockBean       → import org.springframework.boot.test.mock.mockito.MockBean;\n"
-        "2. @Mock           → import org.mockito.Mock;\n"
-        "3. @InjectMocks    → import org.mockito.InjectMocks;\n"
-        "4. when()/verify() → import static org.mockito.Mockito.*;\n"
-        "5. NEVER 'import org.mockito.MockBean' — does not exist.\n"
-        "6. Service tests MUST have @ExtendWith(MockitoExtension.class) on the class.\n"
-        "   Without it, @InjectMocks is null → NullPointerException on every test.\n"
-        "7. Controller tests: @WebMvcTest(XController.class), no @ExtendWith needed.\n"
-        "8. Every @Test method must have at least one assertion."
+        "1.  @MockBean       → import org.springframework.boot.test.mock.mockito.MockBean;\n"
+        "2.  @Mock           → import org.mockito.Mock;\n"
+        "3.  @InjectMocks    → import org.mockito.InjectMocks;\n"
+        "4.  when()/verify() → import static org.mockito.Mockito.*;\n"
+        "5.  NEVER 'import org.mockito.MockBean' — does not exist.\n"
+        "6.  Service tests MUST have @ExtendWith(MockitoExtension.class) on the class.\n"
+        "    Without it, @InjectMocks is null → NullPointerException on every test.\n"
+        "7.  Controller tests: @WebMvcTest(XController.class), no @ExtendWith needed.\n"
+        "8.  Every @Test method must have at least one assertion.\n"
+        "9.  ALWAYS include: import org.junit.jupiter.api.Test;\n"
+        "10. ALWAYS include: import org.junit.jupiter.api.DisplayName;\n"
+        "11. ALWAYS include: import org.junit.jupiter.api.BeforeEach; (if used)\n"
+        "12. ALWAYS include: import static org.junit.jupiter.api.Assertions.*;\n"
+        "13. Every annotation used MUST have a corresponding import — no exceptions."
     )
 
     user = f"""Fix this broken JUnit 5 test file.
@@ -591,6 +643,7 @@ Instructions:
 - Keep the exact same package and class name
 - Fix ALL listed errors
 - Do not remove any existing tests
+- Ensure EVERY annotation has an explicit import (especially @Test and @DisplayName)
 - Output ONLY the corrected raw Java starting from the package declaration"""
 
     fixed = call_groq(system, user)
