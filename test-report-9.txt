@@ -1,0 +1,135 @@
+=======================================
+ TEST REPORT — Run #9
+ Commit: 3529b5da3c628046da9af5fb4e259d26b5c9ec10
+ Branch: main
+ Date:   Wed Apr  1 05:18:21 UTC 2026
+=======================================
+
+--- GROQ GENERATOR OUTPUT ---
+⚠️  No .env file found — using environment variables
+
+════════════════════════════════════════════════════════════
+  🤖 Groq AI — Generate → Run → Fix → Repeat
+════════════════════════════════════════════════════════════
+   🔑 Key: gsk_vGcX...xCss
+   ✅ groq SDK already installed
+
+── Finding Service and Controller files...
+   Found 2 file(s):
+   • src/main/java/com/example/autotest/controllers/CalculatorController.java
+   • src/main/java/com/example/autotest/services/CalculatorService.java
+
+════════════════════════════════════════════════════════════
+  STEP 1 — Generating Tests
+════════════════════════════════════════════════════════════
+
+── Generating: CalculatorController.java
+   ✅ Generated: src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java
+
+── Generating: CalculatorService.java
+   ✅ Generated: src/test/java/com/example/autotest/services/CalculatorServiceTest.java
+
+   Generated 2 test file(s):
+   • src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java
+   • src/test/java/com/example/autotest/services/CalculatorServiceTest.java
+
+════════════════════════════════════════════════════════════
+  STEP 2 — Checking pom.xml
+════════════════════════════════════════════════════════════
+   ✅ pom.xml already has all required dependencies
+
+════════════════════════════════════════════════════════════
+  STEP 3 — Run → Fix → Repeat
+════════════════════════════════════════════════════════════
+
+🧪 First run (attempt 1 of 4)...
+
+── Running: mvn test
+  location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[60,6] cannot find symbol
+  symbol:   class DisplayName
+  location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[68,6] cannot find symbol
+  symbol:   class Test
+  location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[69,6] cannot find symbol
+  symbol:   class DisplayName
+  location: class com.example.autotest.controllers.CalculatorControllerTest
+[INFO] 12 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  1.805 s
+[INFO] Finished at: 2026-04-01T05:18:20Z
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.13.0:testCompile (default-testCompile) on project autotest: Compilation failure: Compilation failure: 
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[21,6] cannot find symbol
+[ERROR]   symbol:   class Test
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[22,6] cannot find symbol
+[ERROR]   symbol:   class DisplayName
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[32,6] cannot find symbol
+[ERROR]   symbol:   class Test
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[33,6] cannot find symbol
+[ERROR]   symbol:   class DisplayName
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[43,6] cannot find symbol
+[ERROR]   symbol:   class Test
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[44,6] cannot find symbol
+[ERROR]   symbol:   class DisplayName
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[51,6] cannot find symbol
+[ERROR]   symbol:   class Test
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[52,6] cannot find symbol
+[ERROR]   symbol:   class DisplayName
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[59,6] cannot find symbol
+[ERROR]   symbol:   class Test
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[60,6] cannot find symbol
+[ERROR]   symbol:   class DisplayName
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[68,6] cannot find symbol
+[ERROR]   symbol:   class Test
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] /home/runner/work/autotest/autotest/src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java:[69,6] cannot find symbol
+[ERROR]   symbol:   class DisplayName
+[ERROR]   location: class com.example.autotest.controllers.CalculatorControllerTest
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+
+
+🔧 Auto-fixing errors (round 1/3)...
+   🔍 Parsed errors in 1 file(s):
+      • Re: 1 error(s)
+        - run: Maven using the -X switch to enable full debug logging.
+   ✅ pom.xml already has all required dependencies
+   ⚠️  No matching source found for Re — fixing without source context
+   ⚠️  Cannot find on disk: Re
+   ⚠️  Nothing was fixed this round — stopping loop
+
+════════════════════════════════════════════════════════════
+  Summary
+════════════════════════════════════════════════════════════
+  Source files : 2
+  Tests created: 2
+
+  📂 Test files:
+     • src/test/java/com/example/autotest/AutotestApplicationTests.java
+     • src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java
+     • src/test/java/com/example/autotest/services/CalculatorServiceTest.java
+
+--- SUREFIRE SUMMARY ---
+
+--- JACOCO COVERAGE SUMMARY ---
+JaCoCo report not available
