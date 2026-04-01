@@ -20,9 +20,18 @@ public class CalculatorServiceTest {
     @InjectMocks
     private CalculatorService calculatorService;
 
+<<<<<<< HEAD
     @BeforeEach
     public void setup() {
         // no setup needed for this test
+=======
+    @Mock
+    private Object dependency; // no dependencies in CalculatorService, but added for demonstration
+
+    @BeforeEach
+    public void setup() {
+        // no setup needed for this simple service
+>>>>>>> 987c234e46e6be95a78a2fc9ee37172a25bbfa38
     }
 
     @Test
@@ -54,10 +63,17 @@ public class CalculatorServiceTest {
     }
 
     @Test
+<<<<<<< HEAD
     @DisplayName("testDivideByZero")
     public void testDivideByZero() {
         RuntimeException exception = assertThrows(RuntimeException.class, () -> calculatorService.divide(6, 0));
         assertEquals("Cannot divide by zero", exception.getMessage());
+=======
+    @DisplayName("testDivideByOne")
+    public void testDivideByOne() {
+        int result = calculatorService.divide(6, 1);
+        assertEquals(6, result);
+>>>>>>> 987c234e46e6be95a78a2fc9ee37172a25bbfa38
     }
 
     @Test
@@ -72,5 +88,14 @@ public class CalculatorServiceTest {
     public void testDivideMixedNumbers() {
         int result = calculatorService.divide(-6, 2);
         assertEquals(-3, result);
+<<<<<<< HEAD
+=======
+    }
+
+    @Test
+    @DisplayName("testDivideByZero")
+    public void testDivideByZero() {
+        assertThrows(RuntimeException.class, () -> calculatorService.divide(6, 0));
+>>>>>>> 987c234e46e6be95a78a2fc9ee37172a25bbfa38
     }
 }
