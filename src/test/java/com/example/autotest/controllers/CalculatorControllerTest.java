@@ -21,7 +21,6 @@ public class CalculatorControllerTest {
 
     @MockBean
     private CalculatorService service;
-<<<<<<< HEAD
 
     @BeforeEach
     void setup() {
@@ -37,23 +36,10 @@ public class CalculatorControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("10"));
         verify(service, times(1)).add(5, 5);
-=======
-
-    @Test
-    @DisplayName("testAddHappyPath")
-    public void testAddHappyPath() throws Exception {
-        when(service.add(1, 2)).thenReturn(3);
-        mockMvc.perform(get("/calc/add")
-                .param("a", "1")
-                .param("b", "2"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("3"));
->>>>>>> 987c234e46e6be95a78a2fc9ee37172a25bbfa38
     }
 
     @Test
     @DisplayName("testAddNegativeNumbers")
-<<<<<<< HEAD
     void testAddNegativeNumbers() throws Exception {
         mockMvc.perform(get("/calc/add")
                 .param("a", "-5")
@@ -61,44 +47,24 @@ public class CalculatorControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("10"));
         verify(service, times(1)).add(-5, -5);
-=======
-    public void testAddNegativeNumbers() throws Exception {
-        when(service.add(-1, -2)).thenReturn(-3);
-        mockMvc.perform(get("/calc/add")
-                .param("a", "-1")
-                .param("b", "-2"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("-3"));
->>>>>>> 987c234e46e6be95a78a2fc9ee37172a25bbfa38
     }
 
     @Test
     @DisplayName("testAddMissingParameters")
-<<<<<<< HEAD
     void testAddMissingParameters() throws Exception {
         mockMvc.perform(get("/calc/add")
                 .param("a", "5"))
-=======
-    public void testAddMissingParameters() throws Exception {
-        mockMvc.perform(get("/calc/add")
-                .param("a", "1"))
->>>>>>> 987c234e46e6be95a78a2fc9ee37172a25bbfa38
                 .andExpect(status().isBadRequest());
+        verify(service, never()).add(anyInt(), anyInt());
     }
 
     @Test
     @DisplayName("testAddNonIntegerParameters")
-<<<<<<< HEAD
     void testAddNonIntegerParameters() throws Exception {
         mockMvc.perform(get("/calc/add")
                 .param("a", "five")
                 .param("b", "5"))
-=======
-    public void testAddNonIntegerParameters() throws Exception {
-        mockMvc.perform(get("/calc/add")
-                .param("a", "one")
-                .param("b", "2"))
->>>>>>> 987c234e46e6be95a78a2fc9ee37172a25bbfa38
                 .andExpect(status().isBadRequest());
+        verify(service, never()).add(anyInt(), anyInt());
     }
 }
