@@ -1,0 +1,143 @@
+=======================================
+ TEST REPORT — Run #10
+ Commit: 5043e97eebd1619b788670b2418f509e12907177
+ Branch: main
+ Date:   Wed Apr  1 05:25:05 UTC 2026
+=======================================
+
+--- GROQ GENERATOR OUTPUT ---
+⚠️  No .env file found — using environment variables
+
+════════════════════════════════════════════════════════════
+  🤖 Groq AI — Generate → Run → Fix → Repeat
+════════════════════════════════════════════════════════════
+   🔑 Key: gsk_vGcX...xCss
+   ✅ groq SDK already installed
+
+── Finding Service and Controller files...
+   Found 2 file(s):
+   • src/main/java/com/example/autotest/controllers/CalculatorController.java
+   • src/main/java/com/example/autotest/services/CalculatorService.java
+
+════════════════════════════════════════════════════════════
+  STEP 1 — Generating Tests
+════════════════════════════════════════════════════════════
+
+── Generating: CalculatorController.java
+   ✅ Generated: src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java
+
+── Generating: CalculatorService.java
+   ✅ Generated: src/test/java/com/example/autotest/services/CalculatorServiceTest.java
+
+   Generated 2 test file(s):
+   • src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java
+   • src/test/java/com/example/autotest/services/CalculatorServiceTest.java
+
+════════════════════════════════════════════════════════════
+  STEP 2 — Checking pom.xml
+════════════════════════════════════════════════════════════
+   ✅ pom.xml already has all required dependencies
+
+════════════════════════════════════════════════════════════
+  STEP 3 — Run → Fix → Repeat
+════════════════════════════════════════════════════════════
+
+🧪 First run (attempt 1 of 4)...
+
+── Running: mvn test
+oot.devtools.restart.RestartApplicationListener -- Restart disabled due to context in which it is running
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.4.1)
+
+2026-04-01T05:25:00.064Z  INFO 2558 --- [autotest] [           main] c.e.a.c.CalculatorControllerTest         : Starting CalculatorControllerTest using Java 17.0.18 with PID 2558 (started by runner in /home/runner/work/autotest/autotest)
+2026-04-01T05:25:00.066Z  INFO 2558 --- [autotest] [           main] c.e.a.c.CalculatorControllerTest         : No active profile set, falling back to 1 default profile: "default"
+2026-04-01T05:25:02.931Z  INFO 2558 --- [autotest] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-04-01T05:25:02.932Z  INFO 2558 --- [autotest] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-04-01T05:25:02.936Z  INFO 2558 --- [autotest] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 2 ms
+2026-04-01T05:25:03.024Z  INFO 2558 --- [autotest] [           main] c.e.a.c.CalculatorControllerTest         : Started CalculatorControllerTest in 3.55 seconds (process running for 5.202)
+2026-04-01T05:25:03.474Z  WARN 2558 --- [autotest] [           main] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'b' for method parameter type int is not present]
+2026-04-01T05:25:03.503Z  WARN 2558 --- [autotest] [           main] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.method.annotation.MethodArgumentTypeMismatchException: Method parameter 'a': Failed to convert value of type 'java.lang.String' to required type 'int'; For input string: "abc"]
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.677 s -- in com.example.autotest.controllers.CalculatorControllerTest
+[INFO] Running com.example.autotest.services.CalculatorServiceTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.128 s -- in com.example.autotest.services.CalculatorServiceTest
+[INFO] Running com.example.autotest.AutotestApplicationTests
+2026-04-01T05:25:03.704Z  INFO 2558 --- [autotest] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.example.autotest.AutotestApplicationTests]: AutotestApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T05:25:03.720Z  INFO 2558 --- [autotest] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.example.autotest.AutotestApplication for test class com.example.autotest.AutotestApplicationTests
+2026-04-01T05:25:03.729Z  INFO 2558 --- [autotest] [           main] o.s.b.d.r.RestartApplicationListener     : Restart disabled due to context in which it is running
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.4.1)
+
+2026-04-01T05:25:03.802Z  INFO 2558 --- [autotest] [           main] c.e.autotest.AutotestApplicationTests    : Starting AutotestApplicationTests using Java 17.0.18 with PID 2558 (started by runner in /home/runner/work/autotest/autotest)
+2026-04-01T05:25:03.803Z  INFO 2558 --- [autotest] [           main] c.e.autotest.AutotestApplicationTests    : No active profile set, falling back to 1 default profile: "default"
+2026-04-01T05:25:04.697Z  INFO 2558 --- [autotest] [           main] c.e.autotest.AutotestApplicationTests    : Started AutotestApplicationTests in 0.968 seconds (process running for 6.876)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.013 s -- in com.example.autotest.AutotestApplicationTests
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jacoco:0.8.12:report (report) @ autotest ---
+[INFO] Loading execution data file /home/runner/work/autotest/autotest/target/jacoco.exec
+[INFO] Analyzed bundle 'autotest' with 3 classes
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  11.320 s
+[INFO] Finished at: 2026-04-01T05:25:05Z
+[INFO] ------------------------------------------------------------------------
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+
+════════════════════════════════════════════════════════════
+  ✅ ALL TESTS PASSED!
+════════════════════════════════════════════════════════════
+
+════════════════════════════════════════════════════════════
+  Summary
+════════════════════════════════════════════════════════════
+  Source files : 2
+  Tests created: 2
+
+  📂 Test files:
+     • src/test/java/com/example/autotest/AutotestApplicationTests.java
+     • src/test/java/com/example/autotest/controllers/CalculatorControllerTest.java
+     • src/test/java/com/example/autotest/services/CalculatorServiceTest.java
+
+--- SUREFIRE SUMMARY ---
+
+### target/surefire-reports/com.example.autotest.AutotestApplicationTests.txt ###
+-------------------------------------------------------------------------------
+Test set: com.example.autotest.AutotestApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.013 s -- in com.example.autotest.AutotestApplicationTests
+
+### target/surefire-reports/com.example.autotest.services.CalculatorServiceTest.txt ###
+-------------------------------------------------------------------------------
+Test set: com.example.autotest.services.CalculatorServiceTest
+-------------------------------------------------------------------------------
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.128 s -- in com.example.autotest.services.CalculatorServiceTest
+
+### target/surefire-reports/com.example.autotest.controllers.CalculatorControllerTest.txt ###
+-------------------------------------------------------------------------------
+Test set: com.example.autotest.controllers.CalculatorControllerTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.677 s -- in com.example.autotest.controllers.CalculatorControllerTest
+
+--- JACOCO COVERAGE SUMMARY ---
+86%
+100%
