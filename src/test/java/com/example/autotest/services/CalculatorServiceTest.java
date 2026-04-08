@@ -14,62 +14,62 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(MockitoExtension.class)
 public class CalculatorServiceTest {
 
+    @Mock
+    private CalculatorService calculatorServiceMock;
+
     @InjectMocks
     private CalculatorService calculatorService;
 
-    @Mock
-    private Object dependency; // no dependencies in this case, but added for completeness
-
     @BeforeEach
-    public void setup() {
-        // no setup needed in this case
+    void setup() {
+        calculatorService = new CalculatorService();
     }
 
     @Test
     @DisplayName("testAddHappyPath")
-    public void testAddHappyPath() {
-        int result = calculatorService.add(2, 3);
-        assertEquals(5, result);
+    void testAddHappyPath() {
+        int result = calculatorService.add(5, 7);
+        assertEquals(12, result);
     }
 
     @Test
     @DisplayName("testAddNegativeNumbers")
-    public void testAddNegativeNumbers() {
-        int result = calculatorService.add(-2, -3);
-        assertEquals(-5, result);
+    void testAddNegativeNumbers() {
+        int result = calculatorService.add(-5, -7);
+        assertEquals(-12, result);
     }
 
     @Test
     @DisplayName("testAddMixedNumbers")
-    public void testAddMixedNumbers() {
-        int result = calculatorService.add(-2, 3);
-        assertEquals(1, result);
+    void testAddMixedNumbers() {
+        int result = calculatorService.add(-5, 7);
+        assertEquals(2, result);
     }
 
     @Test
     @DisplayName("testDivideHappyPath")
-    public void testDivideHappyPath() {
-        int result = calculatorService.divide(6, 2);
-        assertEquals(3, result);
+    void testDivideHappyPath() {
+        int result = calculatorService.divide(10, 2);
+        assertEquals(5, result);
     }
 
     @Test
     @DisplayName("testDivideByZero")
-    public void testDivideByZero() {
-        assertThrows(RuntimeException.class, () -> calculatorService.divide(6, 0));
+    void testDivideByZero() {
+        assertThrows(RuntimeException.class, () -> calculatorService.divide(10, 0));
     }
 
     @Test
     @DisplayName("testDivideNegativeNumbers")
-    public void testDivideNegativeNumbers() {
-        int result = calculatorService.divide(-6, 2);
-        assertEquals(-3, result);
+    void testDivideNegativeNumbers() {
+        int result = calculatorService.divide(-10, 2);
+        assertEquals(-5, result);
     }
 
     @Test
     @DisplayName("testDivideMixedNumbers")
-    public void testDivideMixedNumbers() {
-        int result = calculatorService.divide(-6, -2);
-        assertEquals(3, result);
+    void testDivideMixedNumbers() {
+        int result = calculatorService.divide(-10, -2);
+        assertEquals(5, result);
     }
 }

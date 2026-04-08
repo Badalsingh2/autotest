@@ -28,13 +28,13 @@ public class CalculatorControllerTest {
     private CalculatorService service;
 
     @BeforeEach
-    void setup() {
+    public void setup() {
         when(service.add(anyInt(), anyInt())).thenReturn(10);
     }
 
     @Test
     @DisplayName("testAddHappyPath")
-    void testAddHappyPath() throws Exception {
+    public void testAddHappyPath() throws Exception {
         when(service.add(5, 5)).thenReturn(10);
         mockMvc.perform(get("/calc/add")
                 .param("a", "5")
@@ -45,7 +45,7 @@ public class CalculatorControllerTest {
 
     @Test
     @DisplayName("testAddNegativeNumbers")
-    void testAddNegativeNumbers() throws Exception {
+    public void testAddNegativeNumbers() throws Exception {
         when(service.add(-5, -5)).thenReturn(-10);
         mockMvc.perform(get("/calc/add")
                 .param("a", "-5")
@@ -56,7 +56,7 @@ public class CalculatorControllerTest {
 
     @Test
     @DisplayName("testAddLargeNumbers")
-    void testAddLargeNumbers() throws Exception {
+    public void testAddLargeNumbers() throws Exception {
         when(service.add(1000, 1000)).thenReturn(2000);
         mockMvc.perform(get("/calc/add")
                 .param("a", "1000")
@@ -67,7 +67,7 @@ public class CalculatorControllerTest {
 
     @Test
     @DisplayName("testAddMissingParameters")
-    void testAddMissingParameters() throws Exception {
+    public void testAddMissingParameters() throws Exception {
         mockMvc.perform(get("/calc/add")
                 .param("a", "5"))
                 .andExpect(status().isBadRequest());
@@ -75,7 +75,7 @@ public class CalculatorControllerTest {
 
     @Test
     @DisplayName("testAddInvalidParameters")
-    void testAddInvalidParameters() throws Exception {
+    public void testAddInvalidParameters() throws Exception {
         mockMvc.perform(get("/calc/add")
                 .param("a", "abc")
                 .param("b", "5"))
